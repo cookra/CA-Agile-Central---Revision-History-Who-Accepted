@@ -1,0 +1,76 @@
+.app {
+    /* Add app styles here */
+}
+.wrapper {
+    display: flex;
+    margin-bottom: 1px;
+}
+.n-t{
+    height: 100%;
+    width: 30px;
+    padding: 4px;
+    width: 30px;
+}
+.d-t{
+    flex: 1;
+    height: 100%;
+    width: 30px;
+    padding: 4px;
+    width: 30px;
+}
+.n-Original {
+    color: black;
+    background: #D9D0EB;
+}
+.d-Original {
+    color: black;
+    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+}
+.n-Backlog {
+    color: black;
+    background: #E7E1F3;
+}
+.d-Backlog {
+    color: black;
+    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+}
+.n-Defined {
+    color: black;
+    background: #E7E1F3;
+}
+.d-Defined {
+    color: black;
+    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+}
+.n-In-Progress {
+    color: black;
+    background: #E7E1F3;
+}
+.d-In-Progress {
+    color: black;
+    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+}
+.n-Completed {
+    color: black;
+    background: #E7E1F3;
+}
+.d-Completed {
+    color: black;
+    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+}
+.n-Accepted {
+    color: white;
+    background: mediumseagreen;
+}
+.d-Accepted {
+    color: white;
+    background: repeating-linear-gradient(45deg,mediumseagreen,mediumseagreen 10px,mediumaquamarine 10px,mediumaquamarine 20px);
+}
+.n-Live {
+    color: white;
+    background: forestgreen;
+}
+.d-Live {
+    color: white;
+    background: repeating-linear-gradient(45deg,forestgreen,forestgreen 10px,green 10px,green 20px);
+}

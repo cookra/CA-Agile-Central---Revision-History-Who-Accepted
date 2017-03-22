@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Random App Name33805</title>
+
+    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function () {
+                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",_artifacts:[],_getFilters:function(iterationValue,severityValue){var filterAccepted=Ext.create("Rally.data.wsapi.Filter",{property:"ScheduleState",operation:"=",value:"Accepted"}),filterLive=Ext.create("Rally.data.wsapi.Filter",{property:"ScheduleState",operation:"=",value:"Live"});return filterAccepted.or(filterLive)},launch:function(){var today=(new Date).toISOString(),that=this,artifacts=Ext.create("Rally.data.wsapi.Store",{model:"UserStory",fetch:["ObjectID","FormattedID","Name","RevisionHistory","Revisions","Description","User","ScheduleState"],autoLoad:!0,filters:this._getFilters()});artifacts.load().then({success:this._getRevHistoryModel,scope:this}).then({success:this._onRevHistoryModelCreated,scope:this}).then({success:this._onModelLoaded,scope:this}).then({success:this._stitchDataTogether,scope:this}).then({success:function(results){that._makeGrid(results)},failure:function(){console.log("oh noes!")}})},_getRevHistoryModel:function(artifacts){return this._artifacts=artifacts,Rally.data.ModelFactory.getModel({type:"RevisionHistory"})},_onRevHistoryModelCreated:function(model){var that=this,promises=[];return _.each(this._artifacts,function(artifact){var ref=artifact.get("RevisionHistory")._ref;console.log(artifact.get("FormattedID"),ref),promises.push(model.load(Rally.util.Ref.getOidFromRef(ref)))}),Deft.Promise.all(promises)},_onModelLoaded:function(histories){var promises=[];return _.each(histories,function(history){var revisions=history.get("Revisions");revisions.store=history.getCollection("Revisions",{fetch:["User","Description","CreationDate","RevisionNumber"]}),promises.push(revisions.store.load())}),Deft.Promise.all(promises)},_stitchDataTogether:function(revhistories){var that=this,artifactsWithRevs=[];_.each(that._artifacts,function(artifact){artifactsWithRevs.push({artifact:artifact.data})});var i=0;return _.each(revhistories,function(revisions){artifactsWithRevs[i].revisions=revisions,i++}),artifactsWithRevs},_makeGrid:function(artifactsWithRevs){console.log(artifactsWithRevs),this.add({xtype:"rallygrid",showPagingToolbar:!0,showRowActionsColumn:!1,editable:!1,store:Ext.create("Rally.data.custom.Store",{data:artifactsWithRevs}),columnCfgs:[{text:"FormattedID",dataIndex:"artifact",renderer:function(value){return'<a href="https://rally1.rallydev.com/#/detail/userstory/'+value.ObjectID+'" target="_blank">'+value.FormattedID+"</a>"}},{text:"Name",dataIndex:"artifact",flex:1,renderer:function(value){return value.Name}},{text:"Schedule State",dataIndex:"artifact",renderer:function(value){return value.ScheduleState}},{text:"Revision author",dataIndex:"revisions",renderer:function(value){var html=[];return _.each(value,function(rev){html.push(rev.data.User._refObjectName)}),html.join("</br></br>")}},{text:"Revision # and description",dataIndex:"revisions",flex:1,renderer:function(value){var html=[];return _.each(value,function(rev){html.push(rev.data.RevisionNumber+" "+rev.data.Description)}),html.join("</br></br>")}}]})}});
+
+            Rally.launchApp('CustomApp', {
+                name:"Random App Name33805",
+	            parentRepos:""
+            });
+
+        });
+    </script>
+
+
+    <style type="text/css">
+        
+    </style>
+</head>
+<body>
+</body>
+</html>

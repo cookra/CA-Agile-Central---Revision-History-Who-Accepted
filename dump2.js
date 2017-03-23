@@ -2,117 +2,80 @@ Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     _artifacts: [],
-
-
-    items: [ // pre-define the general layout of the app; the skeleton (ie. header, content, footer)
-        {
-            xtype: 'container', // this container lets us control the layout of the pulldowns; they'll be added below
-            itemId: 'pulldown-container',
-            layout: {
-                type: 'hbox', // 'horizontal' layout
-                align: 'stretch'
-            }
-        }
+    dataList: [
+        [1, 'FormattedID'],
+        [0, 'Name'],
+        [0, 'Project'],
+        [0, 'Owner'],
+        [0, 'CreatedDate'],
+        [0, 'DisplayColor'],
+        [0, 'ScheduleState'],
+        [1, 'Blocked'],
+        [0, 'DirectChildrenCount'],
+        [1, 'Defects'],
+        [1, 'Iteration'],
+        [1, 'PlanEstimate'],
+        [1, 'Predecessors'],
+        [1, 'Successors'],
+        [1, 'Release'],
+        [1, 'TestCases'],
     ],
-    launch: function () {
-        this._loadIterations();
-    },
-
-    // create and load iteration pulldown 
-    _loadIterations: function () {
-        var me = this;
-        var iterComboBox = Ext.create('Rally.ui.combobox.IterationComboBox', {
-            itemId: 'iteration-combobox', // we'll use this item ID later to get the users' selection
-            fieldLabel: 'Iteration',
-            labelAlign: 'right',
-            width: 400,
-            listeners: {
-                ready: me._loadData, // initialization flow: next, load severities
-                select: me._loadData, // user interactivity: when they choose a value, (re)load the data
-                scope: me
-            }
-        });
-
-        this.down('#pulldown-container').add(iterComboBox); // add the iteration list to the pulldown container so it lays out horiz, not the app!
-    },
-    _loadData: function () {
-        console.log('\033[2J'); // clear the console
-
-        var selectedIterRef = this.down('#iteration-combobox').getRecord().get('_ref');
-        var myFilters = this._getFilters(selectedIterRef);
-        if (this.switch) {
-            console.log('store exists');
-            this.artifacts.setFilter(myFilters);
-            this.artifacts.load();
-            // create store
-        } else {
-            console.log('new store');
-            this.artifacts = Ext.create('Rally.data.wsapi.Store', {
-                model: 'User Story',
-                autoLoad: true,
-                filters: myFilters,
-                limit: Infinity,
-                fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
-                listeners: {
-                    load: function () {
-                        this.switch = this.artifacts;
-                    },
-                    scope: this
-                }
-            });
-            this.artifacts.load().then({
-                success: this._getRevHistoryModel,
-                scope: this
-            }).then({
-                success: this._onRevHistoryModelCreated,
-                scope: this
-            }).then({
-                success: this._onModelLoaded,
-                scope: this
-            }).then({
-                success: this._stitchDataTogether,
-                scope: this
-            }).then({
-                success: function (results) {
-                    if (!this.grid) {
-                        this._makeGrid(results);
-                    }
-                },
-                scope: this,
-                failure: function () {
-                    console.log("There's a rattle in the manifold...");
-                },
-            });
-        }
-    },
-    _getFilters: function (iterationValue) {
+    _getFilters: function () {
         var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
             property: 'ScheduleState',
             operation: '=',
             value: 'Accepted'
         });
+
         var filterLive = Ext.create('Rally.data.wsapi.Filter', {
             property: 'ScheduleState',
             operation: '=',
             value: 'Live'
         });
-        var filterBacklog = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'ScheduleState',
-            operation: '=',
-            value: 'Backlog'
+        return filterAccepted.or(filterLive);
+    },
+    launch: function () {
+
+
+              if (this.artifacts) {
+        console.log('store exists');
+        me.defectStore.setFilter(myFilters);
+        me.defectStore.load();
+
+      // create store
+    } else {
+        
+
+        console.log('\033[2J'); // clear the console
+        //var today = new Date().toISOString();
+        var artifacts = Ext.create('Rally.data.wsapi.Store', {
+            model: 'User Story',
+            limit: Infinity,
+            autoLoad: true,
+            filters: this._getFilters(),
+            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
         });
-        var filterInprogress = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'ScheduleState',
-            operation: '=',
-            value: 'In-Progress'
+        artifacts.load().then({
+            success: this._getRevHistoryModel,
+            scope: this
+        }).then({
+            success: this._onRevHistoryModelCreated,
+            scope: this
+        }).then({
+            success: this._onModelLoaded,
+            scope: this
+        }).then({
+            success: this._stitchDataTogether,
+            scope: this
+        }).then({
+            success: function (results) {
+                this._makeGrid(results);
+            },
+            scope: this,
+            failure: function () {
+                console.log("There's a rattle in the manifold...");
+            }
         });
-        var iterationFilter = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'Iteration',
-            operation: '=',
-            value: iterationValue
-        });
-        console.log(iterationFilter.and(filterAccepted.or(filterLive).or(filterBacklog).or(filterInprogress)));
-        return iterationFilter;
     },
     _getRevHistoryModel: function (artifacts) {
         this._artifacts = artifacts;
@@ -141,8 +104,6 @@ Ext.define('CustomApp', {
         return Deft.Promise.all(promises);
     },
     _stitchDataTogether: function (revhistories) {
-        console.log(5, revhistories.length, ' ', revhistories);
-
         var artifactsWithRevs = [];
         _.each(this._artifacts, function (artifact) {
             artifactsWithRevs.push({
@@ -159,8 +120,9 @@ Ext.define('CustomApp', {
     },
 
     _makeGrid: function (artifactsWithRevs) {
-        console.log('@ G');
-        this.grid = Ext.create('Rally.ui.grid.Grid', {
+        console.log('OUTPUT > ',artifactsWithRevs.length);
+        this.add({
+            xtype: 'rallygrid',
             store: Ext.create('Rally.data.custom.Store', {
                 data: artifactsWithRevs
             }),
@@ -267,7 +229,7 @@ Ext.define('CustomApp', {
                                 cssResult = 'recycle-added';
                                 htmlSymbol = '9851';
                             }
-                            if (output.data.Description.includes("DISCUSSION removed") === true || output.data.Description.includes("NAME") === true) {
+                            if (output.data.Description.includes("DISCUSSION removed") === true) {
                                 cssResult = 'discussion-removed';
                                 htmlSymbol = '9990';
                             }
@@ -279,7 +241,7 @@ Ext.define('CustomApp', {
                                 cssResult = 'blocked-reason-removed';
                                 htmlSymbol = '2600';
                             }
-                            if (output.data.Description.includes("REASON added") === true || output.data.Description.includes("BLOCKED REASON") === true) {
+                            if (output.data.Description.includes("REASON added") === true) {
                                 cssResult = 'blocked-reason-added';
                                 htmlSymbol = '9998';
                             }
@@ -299,7 +261,7 @@ Ext.define('CustomApp', {
                                 cssResult = 'test-added';
                                 htmlSymbol = '9758';
                             }
-                            if (output.data.Description.includes("OWNER") === true || output.data.Description.includes("NAMM") === true) {
+                            if (output.data.Description.includes("OWNER") === true) {
                                 cssResult = 'owner';
                                 htmlSymbol = '9758';
                             }
@@ -327,7 +289,7 @@ Ext.define('CustomApp', {
                                 cssResult = 'plan-estimate';
                                 htmlSymbol = '9758';
                             }
-                            if (output.data.Description.includes("COLOR") === true || output.data.Description.includes("TASK") === true) {
+                            if (output.data.Description.includes("COLOR") === true) {
                                 cssResult = 'colour';
                                 htmlSymbol = '9758';
                             }
@@ -376,6 +338,5 @@ Ext.define('CustomApp', {
                 }
             ]
         });
-        this.add(this.grid);
     },
 });

@@ -1,173 +1,600 @@
-(common sRGB name), magenta (common sRGB name) and fuchsia (HTML4/CSS 1.0 standard name), gray (HTML4/CSS 1.0 standard name) and grey.[8][9]
+// R Cook
+// v1.0.1
+// 2017-03-02
+// Template script to load a viewport with 5 panels
+Ext.define('CustomApp', {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    myFetch: [],
+    myCols: [],
+    // Filter theFetch
+    // 0 -> Hide columns
+    // 1 -> Add Column
+    // 1/0 -> Both will be fetched from the query
+    dataList: [
+        [1, 'FormattedID'],
+        [1, 'Name'],
+        [1, 'Project'],
+        [1, 'Owner'],
+        [1, 'CreatedDate'],
+        [1, 'DisplayColor'],
+        [1, 'ScheduleState'],
+        [1, 'Blocked'],
+        [1, 'DirectChildrenCount'],
+        [1, 'Defects'],
+        [1, 'Iteration'],
+        [1, 'PlanEstimate'],
+        [1, 'Predecessors'],
+        [1, 'Successors'],
+        [1, 'Release'],
+        [1, 'TestCases'],
+    ],
+    launch: function () {
+        this._mask();
+        console.log('\033[2J'); // clear the console
+        var me = this;
+        for (var j = 0; j < this.dataList.length; j++) {
+            if (this.dataList[j][0] === 1) {
+                this.myFetch.push(this.dataList[j][1]);
+                this.myCols.push(this.dataList[j][1]);
+                console.log('@ _launch Filter Fetch (+) ', this.dataList[j][1]);
+            }
+            if (this.dataList[j][0] === 0) {
+                this.myFetch.push(this.dataList[j][1]);
+                console.log('@ _launch Filter Fetch (-) ', this.dataList[j][1]);
+            }
+        }
+        this._loadData();
+    },
+    _getFilters: function () {
+        var myFilter = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'Feature',
+            operation: '=',
+            value: null
+        });
+        return myFilter;
+    },
+    _loadData: function () {
+        var me = this;
+        var myFilters = this._getFilters();
+        console.log('my filter', myFilters.toString());
+        if (me.userStoryStore) {
+            console.log('store exists');
+            me.userStoryStore.setFilter(myFilters);
+            me.userStoryStore.load();
+        } else {
+            console.log('creating store');
+            me.userStoryStore = Ext.create('Rally.data.wsapi.Store', { // create 
+                model: 'User Story',
+                limit: 200,
+                autoLoad: true,
+                filters: myFilters,
+                listeners: {
+                    load: function (myStore, myData, success) {
+                        console.log('got data!', myStore, myData);
+                        if (!me.userStoryGrid) {
+                            me._createGrid(myStore, myData);
+                        }
+                    },
+                    scope: me
+                },
+                fetch: this.myFetch
+            });
+        }
+    },
 
-HTML name	R   G   B
-Hex	Decimal
-Pink colors
-Pink	FF C0 CB	255 192 203
-LightPink	FF B6 C1	255 182 193
-HotPink	FF 69 B4	255 105 180
-DeepPink	FF 14 93	255  20 147
-PaleVioletRed	DB 70 93	219 112 147
-MediumVioletRed	C7 15 85	199  21 133
-Red colors
-LightSalmon	FF A0 7A	255 160 122
-Salmon	FA 80 72	250 128 114
-DarkSalmon	E9 96 7A	233 150 122
-LightCoral	F0 80 80	240 128 128
-IndianRed	CD 5C 5C	205  92  92
-Crimson	DC 14 3C	220  20  60
-FireBrick	B2 22 22	178  34  34
-DarkRed	8B 00 00	139   0   0
-Red	FF 00 00	255   0   0
-Orange colors
-OrangeRed	FF 45 00	255  69   0
-Tomato	FF 63 47	255  99  71
-Coral	FF 7F 50	255 127  80
-DarkOrange	FF 8C 00	255 140   0
-Orange	FF A5 00	255 165   0
-Yellow colors
-Yellow	FF FF 00	255 255   0
-LightYellow	FF FF E0	255 255 224
-LemonChiffon	FF FA CD	255 250 205
-LightGoldenrodYellow	FA FA D2	250 250 210
-PapayaWhip	FF EF D5	255 239 213
-Moccasin	FF E4 B5	255 228 181
-PeachPuff	FF DA B9	255 218 185
-PaleGoldenrod	EE E8 AA	238 232 170
-Khaki	F0 E6 8C	240 230 140
-DarkKhaki	BD B7 6B	189 183 107
-Gold	FF D7 00	255 215   0
-Brown colors
-Cornsilk	FF F8 DC	255 248 220
-BlanchedAlmond	FF EB CD	255 235 205
-Bisque	FF E4 C4	255 228 196
-NavajoWhite	FF DE AD	255 222 173
-Wheat	F5 DE B3	245 222 179
-BurlyWood	DE B8 87	222 184 135
-Tan	D2 B4 8C	210 180 140
-RosyBrown	BC 8F 8F	188 143 143
-SandyBrown	F4 A4 60	244 164  96
-Goldenrod	DA A5 20	218 165  32
-DarkGoldenrod	B8 86 0B	184 134  11
-Peru	CD 85 3F	205 133  63
-Chocolate	D2 69 1E	210 105  30
-SaddleBrown	8B 45 13	139  69  19
-Sienna	A0 52 2D	160  82  45
-Brown	A5 2A 2A	165  42  42
-Maroon	80 00 00	128   0   0
-HTML name	R   G   B
-Hex	Decimal
-Green colors
-DarkOliveGreen	55 6B 2F	 85 107  47
-Olive	80 80 00	128 128   0
-OliveDrab	6B 8E 23	107 142  35
-YellowGreen	9A CD 32	154 205  50
-LimeGreen	32 CD 32	 50 205  50
-Lime	00 FF 00	  0 255   0
-LawnGreen	7C FC 00	124 252   0
-Chartreuse	7F FF 00	127 255   0
-GreenYellow	AD FF 2F	173 255  47
-SpringGreen	00 FF 7F	  0 255 127
-MediumSpringGreen	00 FA 9A	  0 250 154
-LightGreen	90 EE 90	144 238 144
-PaleGreen	98 FB 98	152 251 152
-DarkSeaGreen	8F BC 8F	143 188 143
-MediumAquamarine	66 CD AA	102 205 170
-MediumSeaGreen	3C B3 71	 60 179 113
-SeaGreen	2E 8B 57	 46 139  87
-ForestGreen	22 8B 22	 34 139  34
-Green	00 80 00	  0 128   0
-DarkGreen	00 64 00	  0 100   0
-Cyan colors
-Aqua	00 FF FF	  0 255 255
-Cyan	00 FF FF	  0 255 255
-LightCyan	E0 FF FF	224 255 255
-PaleTurquoise	AF EE EE	175 238 238
-Aquamarine	7F FF D4	127 255 212
-Turquoise	40 E0 D0	 64 224 208
-MediumTurquoise	48 D1 CC	 72 209 204
-DarkTurquoise	00 CE D1	  0 206 209
-LightSeaGreen	20 B2 AA	 32 178 170
-CadetBlue	5F 9E A0	 95 158 160
-DarkCyan	00 8B 8B	  0 139 139
-Teal	00 80 80	  0 128 128
-Blue colors
-LightSteelBlue	B0 C4 DE	176 196 222
-PowderBlue	B0 E0 E6	176 224 230
-LightBlue	AD D8 E6	173 216 230
-SkyBlue	87 CE EB	135 206 235
-LightSkyBlue	87 CE FA	135 206 250
-DeepSkyBlue	00 BF FF	  0 191 255
-DodgerBlue	1E 90 FF	 30 144 255
-CornflowerBlue	64 95 ED	100 149 237
-SteelBlue	46 82 B4	 70 130 180
-RoyalBlue	41 69 E1	 65 105 225
-Blue	00 00 FF	  0   0 255
-MediumBlue	00 00 CD	  0   0 205
-DarkBlue	00 00 8B	  0   0 139
-Navy	00 00 80	  0   0 128
-MidnightBlue	19 19 70	 25  25 112
-HTML name	R   G   B
-Hex	Decimal
-Purple, violet, and magenta colors
-Lavender	E6 E6 FA	230 230 250
-Thistle	D8 BF D8	216 191 216
-Plum	DD A0 DD	221 160 221
-Violet	EE 82 EE	238 130 238
-Orchid	DA 70 D6	218 112 214
-Fuchsia	FF 00 FF	255   0 255
-Magenta	FF 00 FF	255   0 255
-MediumOrchid	BA 55 D3	186  85 211
-MediumPurple	93 70 DB	147 112 219
-BlueViolet	8A 2B E2	138  43 226
-DarkViolet	94 00 D3	148   0 211
-DarkOrchid	99 32 CC	153  50 204
-DarkMagenta	8B 00 8B	139   0 139
-Purple	80 00 80	128   0 128
-Indigo	4B 00 82	 75   0 130
-DarkSlateBlue	48 3D 8B	 72  61 139
-SlateBlue	6A 5A CD	106  90 205
-MediumSlateBlue	7B 68 EE	123 104 238
-White colors
-White	FF FF FF	255 255 255
-Snow	FF FA FA	255 250 250
-Honeydew	F0 FF F0	240 255 240
-MintCream	F5 FF FA	245 255 250
-Azure	F0 FF FF	240 255 255
-AliceBlue	F0 F8 FF	240 248 255
-GhostWhite	F8 F8 FF	248 248 255
-WhiteSmoke	F5 F5 F5	245 245 245
-Seashell	FF F5 EE	255 245 238
-Beige	F5 F5 DC	245 245 220
-OldLace	FD F5 E6	253 245 230
-FloralWhite	FF FA F0	255 250 240
-Ivory	FF FF F0	255 255 240
-AntiqueWhite	FA EB D7	250 235 215
-Linen	FA F0 E6	250 240 230
-LavenderBlush	FF F0 F5	255 240 245
-MistyRose	FF E4 E1	255 228 225
-Gray and black colors
-Gainsboro	DC DC DC	220 220 220
-LightGray	D3 D3 D3	211 211 211
-Silver	C0 C0 C0	192 192 192
-DarkGray	A9 A9 A9	169 169 169
-Gray	80 80 80	128 128 128
-DimGray	69 69 69	105 105 105
-LightSlateGray	77 88 99	119 136 153
-SlateGray	70 80 90	112 128 144
-DarkSlateGray	2F 4F 4F	 47  79  79
-Black	00 00 00	  0   0   0
-Web-safe colors
-Color depth
-1-bit monochrome
-8-bit grayscale
-8-bit color
-15- or 16-bit color (high color)
-24-bit color (true color)
-30-, 36-, or 48-bit color (deep color)
-Related
-Indexed color
-Palette
-RGB color model
-Web-safe color
-In
+    _mask: function () {
+        //this.add(Ext.create('App.Loader')._build('bar'));
+    },
+    _createGrid: function (myStore, myData) {
+        var xData1 = this.getContext().getUser();
+        var xData2 = this.getContext().getProject();
+        var xData3 = this.getContext().getWorkspace();
+        var appVersion = Ext.create('App.System')._this_Application_Details('inapp');
+        var myColours_Barclays = Ext.create('App.Config').PbarclaysColours_5
+        var bodyStyle = 'font-size:20px;padding:10px; color:' + myColours_Barclays[3] + ';';
+        var tabColour_1 = myColours_Barclays[0];
+        var tabColour_2 = myColours_Barclays[0];
+        var tabColour_3 = myColours_Barclays[0];
+        var panelBaseColor = myColours_Barclays[0];
+        var colour_Background_Darken = Ext.create('App.Tools')._shadeBlendConvert(panelBaseColor, -20);
+        var colour_Background = 'background: repeating-linear-gradient(  -45deg,  ' + panelBaseColor + ',' + panelBaseColor + ' 10px,  ' + colour_Background_Darken + ' 10px,  ' + colour_Background_Darken + ' 20px);';
+
+
+        //PbarclaysColours_5: ['#145FAC', '#437EA0', '#00AEEF', '#FFF', '#FFA000'],
+
+        var viewport = Ext.create('Ext.container.Viewport', {
+            items: [{
+                region: 'north',
+                collapsible: true,
+                items: [{
+                    xtype: 'tabpanel',
+                    width: '100%',
+                    items: [{
+                        title: 'About',
+                        width: '100%',
+                        html: 'This custom page display artifacts that are considered to be orphaned',
+                        height: 50,
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: tabColour_1,
+                            }
+                        },
+                        /*
+                        buttons: [{
+                            text: 'Button 1'
+                        }]
+                        */
+                    }, {
+                        title: 'Version',
+                        width: '100%',
+                        html: appVersion[2] + ' ' + appVersion[4] + ' ' + appVersion[3] + ' ' + appVersion[6],
+                        height: 50,
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: tabColour_2,
+                            }
+                        },
+                    }, {
+                        title: 'Support',
+                        width: '100%',
+                        height: 50,
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: tabColour_3,
+                            }
+                        },
+                        items: [{
+                            xtype: 'button',
+                            text: 'Support',
+                            height: 25,
+                            style: {
+                                backgroundColor: 'red',
+                            },
+                            listeners: {
+                                afterrender: function (v) {
+                                    v.el.on('click', function () {
+                                        console.log('[ ' + myStore + ' ] Clicked ');
+                                        Ext.create('App.Emailer')._emailer(myData, xData1, xData2, xData3);
+                                    });
+                                },
+                                scope: this
+                            },
+                        }]
+                    }]
+                }]
+            }, {
+                region: 'south',
+                layout: 'fit',
+                flex: 1,
+                items: [{
+
+                    xtype: 'tabpanel',
+                    width: '100%',
+                    items: [{
+                        title: 'User Stories',
+                        width: '100%',
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                        items: [{
+                            xtype: 'rallygrid',
+                            store: myStore,
+                            height: '100%',
+                            columnCfgs: this.myCols,
+                        }]
+                    }, {
+                        title: 'Features',
+                        width: '100%',
+                        html: 'X',
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                    }, {
+                        title: 'Features',
+                        width: '100%',
+                        html: 'X',
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                    }, {
+                        title: 'Business outcomes',
+                        width: '100%',
+                        html: 'X',
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                    }, {
+                        title: 'Portfolio Objectives',
+                        width: '100%',
+                        html: 'X',
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                    }, {
+                        title: 'Strategic Objectives',
+                        width: '100%',
+                        html: 'X',
+                        bodyStyle: colour_Background + bodyStyle,
+                        cls: 'fixTabMargins',
+                        tabConfig: {
+                            style: {
+                                background: '#808080',
+                            }
+                        },
+                    }],
+
+
+                }]
+            }]
+        });
+    },
+});
+
+
+
+
+////
+
+
+Ext.define('CustomApp', {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    _artifacts: [],
+    dataList: [
+        [1, 'FormattedID'],
+        [0, 'Name'],
+        [0, 'Project'],
+        [0, 'Owner'],
+        [0, 'CreatedDate'],
+        [0, 'DisplayColor'],
+        [0, 'ScheduleState'],
+        [1, 'Blocked'],
+        [0, 'DirectChildrenCount'],
+        [1, 'Defects'],
+        [1, 'Iteration'],
+        [1, 'PlanEstimate'],
+        [1, 'Predecessors'],
+        [1, 'Successors'],
+        [1, 'Release'],
+        [1, 'TestCases'],
+    ],
+    _getFilters: function () {
+        var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Accepted'
+        });
+
+        var filterLive = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Live'
+        });
+        return filterAccepted.or(filterLive);
+    },
+    launch: function () {
+        console.log('\033[2J'); // clear the console
+        //var today = new Date().toISOString();
+        var artifacts = Ext.create('Rally.data.wsapi.Store', {
+            model: 'User Story',
+            limit: 200,
+            autoLoad: true,
+            filters: this._getFilters(),
+            listeners: {
+                load: function (myStore, myData, success) {
+                    console.log('got data!', myStore, myData);
+                    if (!this.artifacts) {
+                        this._build(myStore,myData);
+                    }
+                },
+                scope: this
+            },
+            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
+        });
+    },
+    _build: function (artifacts,data) {
+        console.log(1,data);
+        this._getRevHistoryModel(data);
+        console.log(2,data);
+        this._onRevHistoryModelCreated(data);
+        console.log(3,data);
+        this._onModelLoaded(data);
+        console.log(4,data);
+        this._stitchDataTogether(data);
+        console.log(5,data);
+        this._makeGrid(data);
+    },
+    _getRevHistoryModel: function (artifacts) {
+        console.log(1);
+        this._artifacts = artifacts;
+        return Rally.data.ModelFactory.getModel({
+            type: 'RevisionHistory'
+        });
+    },
+    _onRevHistoryModelCreated: function (model) {
+        console.log(2);
+        var promises = [];
+        _.each(this._artifacts, function (artifact) {
+            var ref = artifact.get('RevisionHistory')._ref;
+            promises.push(model.load(Rally.util.Ref.getOidFromRef(ref)));
+        });
+        return Deft.Promise.all(promises);
+    },
+
+    _onModelLoaded: function (histories) {
+        console.log(3);
+        var promises = [];
+        _.each(histories, function (history) {
+            var revisions = history.get('Revisions');
+            revisions.store = history.getCollection('Revisions', {
+                fetch: ['User', 'Description', 'CreationDate', 'RevisionNumber']
+            });
+            promises.push(revisions.store.load());
+        });
+        return Deft.Promise.all(promises);
+    },
+    _stitchDataTogether: function (revhistories) {
+        console.log(4);
+        var artifactsWithRevs = [];
+        _.each(this._artifacts, function (artifact) {
+            artifactsWithRevs.push({
+                artifact: artifact.data
+            });
+        });
+        var i = 0;
+        _.each(revhistories, function (revisions) {
+            artifactsWithRevs[i].revisions = revisions;
+            i++;
+        });
+        return artifactsWithRevs;
+
+    },
+
+    _makeGrid: function (artifactsWithRevs) {
+        console.log(5);
+        console.log('OUTPUT > ', artifactsWithRevs.length);
+        this.add({
+            xtype: 'rallygrid',
+            store: Ext.create('Rally.data.custom.Store', {
+                data: artifactsWithRevs
+            }),
+            columnCfgs: [{
+                    text: 'FormattedID',
+                    dataIndex: 'artifact',
+                    renderer: function (value) {
+                        var html;
+                        html = '';
+                        html += '<div class="wrapper">';
+                        var authorDiv = '<div class="name-t"><a href="https://rally1.rallydev.com/#/detail/userstory/' + value.ObjectID + '" target="_blank">' + value.FormattedID + '</a></div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html;
+                    }
+                },
+                {
+                    text: 'Name',
+                    dataIndex: 'artifact',
+                    flex: 1,
+                    renderer: function (output) {
+                        var html;
+                        html = '';
+                        html += '<div class="wrapper">';
+                        var authorDiv = '<div class="name-t">' + output.Name + '</div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html;
+                    }
+                },
+                {
+                    text: 'Schedule State',
+                    dataIndex: 'artifact',
+                    renderer: function (output) {
+
+                        var html, cssResult;
+                        html = '';
+
+                        if (output.ScheduleState.includes("Backlog") === true) {
+                            cssResult = 'Backlog';
+                        }
+                        if (output.ScheduleState.includes("Defined") === true) {
+                            cssResult = 'Defined';
+                        }
+                        if (output.ScheduleState.includes("In-Progress") === true) {
+                            cssResult = 'In-Progress';
+                        }
+                        if (output.ScheduleState.includes("Completed") === true) {
+                            cssResult = 'Completed';
+                        }
+                        if (output.ScheduleState.includes("Accepted") === true) {
+                            cssResult = 'Accepted';
+                        }
+                        if (output.ScheduleState.includes("Live") === true) {
+                            cssResult = 'Live';
+                        }
+                        html += '<div class="wrapper">';
+
+                        var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.ScheduleState + '</div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html; //;
+                    }
+                },
+                /*
+                {
+                    text: 'Revision author',
+                    dataIndex: 'revisions',
+                    renderer: function (value) {
+                        var html = [];
+                        _.each(value, function (rev) {
+                            html.push(rev.data.User._refObjectName);
+                        });
+                        return html.join('</br></br>');
+                    }
+                },
+                */
+                {
+                    text: 'History',
+                    dataIndex: 'revisions',
+                    flex: 1,
+                    cls: 'test',
+                    renderer: function (value) {
+                        var html, cssResult, htmlSymbol;
+                        html = '';
+                        _.each(value, function (output) {
+                            if (output.data.Description.includes("KANBAN") === true) {
+                                cssResult = 'kanban';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("RANK moved down") === true) {
+                                cssResult = 'rank-down';
+                                htmlSymbol = '8681';
+                            }
+                            if (output.data.Description.includes("RANK moved up") === true) {
+                                cssResult = 'rank-up';
+                                htmlSymbol = '8679';
+                            }
+                            if (output.data.Description.includes("Recovered from Recycle") === true) {
+                                cssResult = 'recycle-removed';
+                                htmlSymbol = '9851';
+                            }
+                            if (output.data.Description.includes("Moved to Recycle") === true) {
+                                cssResult = 'recycle-added';
+                                htmlSymbol = '9851';
+                            }
+                            if (output.data.Description.includes("DISCUSSION removed") === true) {
+                                cssResult = 'discussion-removed';
+                                htmlSymbol = '9990';
+                            }
+                            if (output.data.Description.includes("DISCUSSION added") === true) {
+                                cssResult = 'discussion-added';
+                                htmlSymbol = '9990';
+                            }
+                            if (output.data.Description.includes("REASON removed") === true) {
+                                cssResult = 'blocked-reason-removed';
+                                htmlSymbol = '2600';
+                            }
+                            if (output.data.Description.includes("REASON added") === true) {
+                                cssResult = 'blocked-reason-added';
+                                htmlSymbol = '9998';
+                            }
+                            if (output.data.Description.includes("BLOCKED changed from [true]") === true) {
+                                cssResult = 'blocked-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("BLOCKED changed from [false]") === true) {
+                                cssResult = 'blocked-true';
+                                htmlSymbol = '9729';
+                            }
+                            if (output.data.Description.includes("FEATURE") === true) {
+                                cssResult = 'feature';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("TEST CASE") === true) {
+                                cssResult = 'test-added';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("OWNER") === true) {
+                                cssResult = 'owner';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("READY changed from [false]") === true) {
+                                cssResult = 'ready-true';
+                                htmlSymbol = '9734';
+                            }
+                            if (output.data.Description.includes("READY changed from [true]") === true) {
+                                cssResult = 'ready-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("EXPEDITE changed from [false]") === true) {
+                                cssResult = 'expedite-true';
+                                htmlSymbol = '9734';
+                            }
+                            if (output.data.Description.includes("EXPEDITE changed from [true]") === true) {
+                                cssResult = 'expedite-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("ITERATION") === true || output.data.Description.includes("RELEASE") === true) {
+                                cssResult = 'iter-release';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("PLAN ESTIMATE") === true) {
+                                cssResult = 'plan-estimate';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("COLOR") === true) {
+                                cssResult = 'colour';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("DESCRIPTION") === true || output.data.Description.includes("NOTES") === true || output.data.Description.includes("ACCEPTANCE CRITERIA") === true || output.data.Description.includes("TAGS") === true) {
+                                cssResult = 'desc-added';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("Original") === true) {
+                                cssResult = 'Original';
+                                htmlSymbol = '9827';
+                            }
+                            if (output.data.Description.includes("to [Backlog]") === true) {
+                                cssResult = 'Backlog';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Defined]") === true) {
+                                cssResult = 'Defined';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [In-Progress") === true) {
+                                cssResult = 'In-Progress';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Completed") === true) {
+                                cssResult = 'Completed';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Accepted") === true) {
+                                cssResult = 'Accepted';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Live]") === true) {
+                                cssResult = 'Live';
+                                htmlSymbol = '9745';
+                            }
+                            html += '<div class="wrapper">';
+                            var numberDiv = '<div class="n-t n-' + cssResult + '">' + output.data.RevisionNumber + '</div>';
+                            var symbolDiv = '<div class="g-t"><span style="font-family:Wingdings">&#' + htmlSymbol + '</span></div>';
+                            var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.data.User._refObjectName + '</div>';
+                            var DescriptionDiv = '<div class="d-t d-' + cssResult + '">' + output.data.Description + '</div>';
+                            html += numberDiv + symbolDiv + authorDiv + DescriptionDiv;
+                            html += '</div>';
+                        });
+                        return html;
+                    },
+                }
+            ]
+        });
+    },
+});

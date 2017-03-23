@@ -1,76 +1,295 @@
 .app {
     /* Add app styles here */
 }
+.x-mmm .x-grid-row .x-grid-data-row .x-grid-row-over {
+    background: black;
+}
 .wrapper {
     display: flex;
     margin-bottom: 1px;
+}
+.underline {
+    width:100%;
+    height:10px;
 }
 .n-t{
     height: 100%;
     width: 30px;
     padding: 4px;
+    margin-right:1px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 20px;
+    font-size: 14px;
+}
+.a-t{
+    height: 100%;
+    width: 120px;
+    padding: 4px;
+    margin-right:1px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 20px;
+    font-size: 14px;
+}
+.name-t{
+    height: 100%;
+    padding: 4px;
+    flex:2;
+    font-weight: bold;
+    text-align: left;
+    font-size: 14px;
+    border-radius: 20px;
+    padding: 4px 10px 4px 10px;
+    background: repeating-linear-gradient(45deg,#F6F6F6,#F6F6F6 10px,#EFEFEF 10px,#EFEFEF 20px);
+}
+.g-t{
+    height: 100%;
     width: 30px;
+    padding: 4px;
+    font-weight: bold;
+    text-align: center;
+    font-size: 14px;
 }
 .d-t{
     flex: 1;
     height: 100%;
     width: 30px;
-    padding: 4px;
+    padding: 4px 10px 4px 10px;
     width: 30px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
 }
 .n-Original {
     color: black;
-    background: #D9D0EB;
+    background: #F0F0F0;
 }
 .d-Original {
     color: black;
-    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+    background: repeating-linear-gradient(45deg,#F0F0F0,#F0F0F0 10px,#D2D2D2 10px,#D2D2D2 20px);
 }
 .n-Backlog {
     color: black;
-    background: #E7E1F3;
+    background: #F7C430;
 }
 .d-Backlog {
     color: black;
-    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+    background: repeating-linear-gradient(45deg,#F7C430,#F7C430 10px,#F7C430 10px,#F7C430 20px);
 }
 .n-Defined {
     color: black;
-    background: #E7E1F3;
+    background: #F99221;
 }
 .d-Defined {
     color: black;
-    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+    background: repeating-linear-gradient(45deg,#F99221,#F99221 10px,#F99221 10px,#F99221 20px);
 }
 .n-In-Progress {
     color: black;
-    background: #E7E1F3;
+    background: #E63B8A;
 }
 .d-In-Progress {
     color: black;
-    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+    background: repeating-linear-gradient(45deg,#E63B8A,#E63B8A 10px,#E63B8A 10px,#E63B8A 20px);
 }
 .n-Completed {
     color: black;
-    background: #E7E1F3;
+    background: #53C8F2;
 }
 .d-Completed {
     color: black;
-    background: repeating-linear-gradient(45deg,#E7E1F3,#E7E1F3 10px,white 10px,white 20px);
+    background: repeating-linear-gradient(45deg,#53C8F2,#53C8F2 10px,#53C8F2 10px,#53C8F2 20px);
 }
 .n-Accepted {
-    color: white;
-    background: mediumseagreen;
+    color: black;
+    background: #C0FF00;
 }
 .d-Accepted {
-    color: white;
-    background: repeating-linear-gradient(45deg,mediumseagreen,mediumseagreen 10px,mediumaquamarine 10px,mediumaquamarine 20px);
+    color: black;
+    background: repeating-linear-gradient(45deg,#C0FF00,#C0FF00 10px,#C0FF00 10px,#C0FF00 20px);
 }
 .n-Live {
-    color: white;
-    background: forestgreen;
+    color: black;
+    background: #C0FF00;
 }
 .d-Live {
+    color: black;
+    background: repeating-linear-gradient(45deg,#C0FF00,#C0FF00 10px,#C0FF00 10px,#C0FF00 20px);
+}
+.n-desc-added {
+    color: black;
+    background: #F3EF4B;
+}
+.d-desc-added {
+    color: black;
+    background: repeating-linear-gradient(45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-colour {
+    color: black;
+    background: #F3EF4B;
+}
+.d-colour {
+    color: black;
+    background: repeating-linear-gradient(45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-plan-estimate {
+    color: black;
+    background: #F3EF4B;
+}
+.d-plan-estimate {
+    color: black;
+    background: repeating-linear-gradient(45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-iter-release {
+    color: black;
+    background: #F3EF4B;
+}
+.d-iter-release {
+    color: black;
+    background: repeating-linear-gradient(45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-ready-true {
     color: white;
-    background: repeating-linear-gradient(45deg,forestgreen,forestgreen 10px,green 10px,green 20px);
+    background: #6CCA2C;
+}
+.d-ready-true {
+    color: white;
+    background: repeating-linear-gradient(-45deg,#6CCA2C,#6CCA2C 10px,#6CCA2C 10px,#6CCA2C 20px);
+}
+.n-ready-false {
+    color: black;
+    background: #6CCA2C;
+}
+.d-ready-false {
+    color: black;
+    background: repeating-linear-gradient(45deg,#6CCA2C,#6CCA2C 10px,#6CCA2C 10px,#6CCA2C 20px);
+}
+.n-expedite-true {
+    color: white;
+    background: #F51B1B;
+}
+.d-expedite-true {
+    color: white;
+    background: repeating-linear-gradient(-45deg,#F51B1B,#F51B1B 10px,#D81818 10px,#D81818 20px);
+}
+.n-expedite-false {
+    color: black;
+    background: #6CCA2C;
+}
+.d-expedite-false {
+    color: black;
+    background: repeating-linear-gradient(45deg,#6CCA2C,#6CCA2C 10px,#6CCA2C 10px,#6CCA2C 20px);
+}
+.n-owner {
+    color: black;
+    background: #F3EF4B;
+}
+.d-owner {
+    color: black;
+    background: repeating-linear-gradient(45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-feature {
+    color: white;
+    background: #E63B8A;
+}
+.d-feature {
+    color: white;
+    background: repeating-linear-gradient(45deg,#E63B8A,#E63B8A 10px,#E63B8A 10px,#E63B8A 20px);
+}
+.n-blocked-true {
+    color: white;
+    background: #F51B1B;
+}
+.d-blocked-true {
+    color: white;
+    background: repeating-linear-gradient(-45deg,#F51B1B,#F51B1B 10px,#D81818 10px,#D81818 20px);
+}
+.n-blocked-false {
+    color: black;
+    background: #6CCA2C;
+}
+.d-blocked-false {
+    color: black;
+    background: repeating-linear-gradient(45deg,#6CCA2C,#6CCA2C 10px,#6CCA2C 10px,#6CCA2C 20px);
+}
+.n-blocked-reason-removed {
+    color: white;
+    background: #C6D614;
+}
+.d-blocked-reason-removed {
+    color: white;
+    background: repeating-linear-gradient(45deg,#C6D614,#C6D614 10px,#B2C10F 10px,#B2C10F 20px);
+}
+.n-blocked-reason-added {
+    color: white;
+    background: #F51B1B;
+}
+.d-blocked-reason-added {
+    color: white;
+    background: repeating-linear-gradient(-45deg,#F51B1B,#F51B1B 10px,#D81818 10px,#D81818 20px);
+}
+.n-test-added {
+    color: black;
+    background: #F3EF4B;
+}
+.d-test-added {
+    color: black;
+    background: repeating-linear-gradient(-45deg,#F3EF4B,#F3EF4B 10px,#F3EF4B 10px,#F3EF4B 20px);
+}
+.n-discussion-added {
+    color: white;
+    background: #351B75;
+}
+.d-discussion-added {
+    color: white;
+    background: repeating-linear-gradient(45deg,#351B75,#351B75 10px,#351B75 10px,#351B75 20px);
+}
+.n-discussion-removed {
+    color: white;
+    background: #351B75;
+}
+.d-discussion-removed {
+    color: white;
+    background: repeating-linear-gradient(-45deg,#351B75,#351B75 10px,#351B75 10px,#351B75 20px);
+}
+.n-recycle-added {
+    color: white;
+    background: #2A95FF;
+}
+.d-recycle-added {
+    color: white;
+    background: repeating-linear-gradient(45deg,#2A95FF,#2A95FF 10px,#2589EB 10px,#2589EB 20px);
+}
+.n-recycle-removed {
+    color: white;
+    background: #2589EB;
+}
+.d-recycle-removed {
+    color: white;
+    background: repeating-linear-gradient(45deg,#2589EB,#2589EB 10px,#2A95FF 10px,#2A95FF 20px);
+}
+.n-rank-up {
+    color: black;
+    background: #FFD300;
+}
+.d-rank-up {
+    color: black;
+    background: repeating-linear-gradient(45deg,#FFD300,#FFD300 10px,#F4CA00 10px,#F4CA00 20px);
+}
+.n-rank-down {
+    color: black;
+    background: #FF9500;
+}
+.d-rank-down {
+    color: black;
+    background: repeating-linear-gradient(45deg,#FF9500,#FF9500 10px,#EE8B00 10px,#EE8B00 20px);
+}
+.n-kanban {
+    color: black;
+    background: #7D64B1;
+}
+.d-kanban {
+    color: black;
+    background: repeating-linear-gradient(45deg,#7D64B1,#7D64B1 10px,#7D64B1 10px,#7D64B1 20px);
 }

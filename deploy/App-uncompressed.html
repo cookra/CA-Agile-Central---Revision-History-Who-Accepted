@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Random App Name33805</title>
+    <title>Revision Data</title>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
 
@@ -12,29 +12,49 @@
     componentCls: 'app',
     _artifacts: [],
 
-    _getFilters: function (iterationValue, severityValue) {
 
-        var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'ScheduleState',
-            operation: '=',
-            value: 'Accepted'
-        });
-
-        var filterLive = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'ScheduleState',
-            operation: '=',
-            value: 'Live'
-        });
-        return filterAccepted.or(filterLive);
-    },
+    items: [ // pre-define the general layout of the app; the skeleton (ie. header, content, footer)
+        {
+            xtype: 'container', // this container lets us control the layout of the pulldowns; they'll be added below
+            itemId: 'pulldown-container',
+            layout: {
+                type: 'hbox', // 'horizontal' layout
+                align: 'stretch'
+            }
+        }
+    ],
     launch: function () {
-        var today = new Date().toISOString();
-        var that = this;
+        this._loadIterations();
+    },
+
+    // create and load iteration pulldown 
+    _loadIterations: function () {
+        var me = this;
+        var iterComboBox = Ext.create('Rally.ui.combobox.IterationComboBox', {
+            itemId: 'iteration-combobox', // we'll use this item ID later to get the users' selection
+            fieldLabel: 'Iteration',
+            labelAlign: 'right',
+            width: 400,
+            listeners: {
+                //ready: me._loadData, // initialization flow: next, load severities
+                select: me._loadData, // user interactivity: when they choose a value, (re)load the data
+                scope: me
+            }
+        });
+
+        this.down('#pulldown-container').add(iterComboBox); // add the iteration list to the pulldown container so it lays out horiz, not the app!
+    },
+    _loadData: function(){
+        console.log('\033[2J'); // clear the console
+
+        var selectedIterRef = this.down('#iteration-combobox').getRecord().get('_ref'); 
+        var myFilters = this._getFilters(selectedIterRef);
         var artifacts = Ext.create('Rally.data.wsapi.Store', {
-            model: 'UserStory',
-            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
+            model: 'User Story',
             autoLoad: true,
-            filters: this._getFilters(),
+            filters: myFilters,
+            limit: Infinity,
+            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
         });
         artifacts.load().then({
             success: this._getRevHistoryModel,
@@ -50,12 +70,42 @@
             scope: this
         }).then({
             success: function (results) {
-                that._makeGrid(results);
+                this._makeGrid(results);
             },
+            scope: this,
             failure: function () {
-                console.log("oh noes!");
+                console.log("There's a rattle in the manifold...");
             }
         });
+    },
+    _getFilters: function (iterationValue) {
+        var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Accepted'
+        });
+        var filterLive = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Live'
+        });
+        var filterBacklog = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Backlog'
+        });
+        var filterInprogress = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'In-Progress'
+        });
+        var iterationFilter = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'Iteration',
+            operation: '=',
+            value: iterationValue
+        });
+        console.log(iterationFilter.and(filterAccepted.or(filterLive).or(filterBacklog).or(filterInprogress)));
+        return iterationFilter;
     },
     _getRevHistoryModel: function (artifacts) {
         this._artifacts = artifacts;
@@ -64,11 +114,9 @@
         });
     },
     _onRevHistoryModelCreated: function (model) {
-        var that = this;
         var promises = [];
         _.each(this._artifacts, function (artifact) {
             var ref = artifact.get('RevisionHistory')._ref;
-            console.log(artifact.get('FormattedID'), ref);
             promises.push(model.load(Rally.util.Ref.getOidFromRef(ref)));
         });
         return Deft.Promise.all(promises);
@@ -86,9 +134,10 @@
         return Deft.Promise.all(promises);
     },
     _stitchDataTogether: function (revhistories) {
-        var that = this;
+        console.log(5, revhistories.length, ' ', revhistories);
+
         var artifactsWithRevs = [];
-        _.each(that._artifacts, function (artifact) {
+        _.each(this._artifacts, function (artifact) {
             artifactsWithRevs.push({
                 artifact: artifact.data
             });
@@ -103,13 +152,9 @@
     },
 
     _makeGrid: function (artifactsWithRevs) {
-        console.log(artifactsWithRevs);
-
+        console.log('@ G');
         this.add({
             xtype: 'rallygrid',
-            showPagingToolbar: true,
-            showRowActionsColumn: false,
-            editable: false,
             store: Ext.create('Rally.data.custom.Store', {
                 data: artifactsWithRevs
             }),
@@ -117,24 +162,64 @@
                     text: 'FormattedID',
                     dataIndex: 'artifact',
                     renderer: function (value) {
-                        return '<a href="https://rally1.rallydev.com/#/detail/userstory/' + value.ObjectID + '" target="_blank">' + value.FormattedID + '</a>';
+                        var html;
+                        html = '';
+                        html += '<div class="wrapper">';
+                        var authorDiv = '<div class="name-t"><a href="https://rally1.rallydev.com/#/detail/userstory/' + value.ObjectID + '" target="_blank">' + value.FormattedID + '</a></div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html;
                     }
                 },
                 {
                     text: 'Name',
                     dataIndex: 'artifact',
-                    flex:1,
-                    renderer: function (value) {
-                        return value.Name;
+                    flex: 1,
+                    renderer: function (output) {
+                        var html;
+                        html = '';
+                        html += '<div class="wrapper">';
+                        var authorDiv = '<div class="name-t">' + output.Name + '</div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html;
                     }
                 },
                 {
                     text: 'Schedule State',
                     dataIndex: 'artifact',
-                    renderer: function (value) {
-                        return value.ScheduleState;
+                    renderer: function (output) {
+
+                        var html, cssResult;
+                        html = '';
+
+                        if (output.ScheduleState.includes("Backlog") === true) {
+                            cssResult = 'Backlog';
+                        }
+                        if (output.ScheduleState.includes("Defined") === true) {
+                            cssResult = 'Defined';
+                        }
+                        if (output.ScheduleState.includes("In-Progress") === true) {
+                            cssResult = 'In-Progress';
+                        }
+                        if (output.ScheduleState.includes("Completed") === true) {
+                            cssResult = 'Completed';
+                        }
+                        if (output.ScheduleState.includes("Accepted") === true) {
+                            cssResult = 'Accepted';
+                        }
+                        if (output.ScheduleState.includes("Live") === true) {
+                            cssResult = 'Live';
+                        }
+                        html += '<div class="wrapper">';
+
+                        var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.ScheduleState + '</div>';
+                        html += authorDiv;
+                        html += '</div>';
+                        return html; //;
                     }
                 },
+                /*
                 {
                     text: 'Revision author',
                     dataIndex: 'revisions',
@@ -146,27 +231,151 @@
                         return html.join('</br></br>');
                     }
                 },
+                */
                 {
-                    text: 'Revision # and description',
+                    text: 'History',
                     dataIndex: 'revisions',
                     flex: 1,
+                    cls: 'test',
                     renderer: function (value) {
-                        var html = [];
-                        _.each(value, function (rev) {
-                            html.push(rev.data.RevisionNumber + " " + rev.data.Description);
+                        var html, cssResult, htmlSymbol;
+                        html = '';
+                        _.each(value, function (output) {
+                            if (output.data.Description.includes("KANBAN") === true) {
+                                cssResult = 'kanban';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("RANK moved down") === true) {
+                                cssResult = 'rank-down';
+                                htmlSymbol = '8681';
+                            }
+                            if (output.data.Description.includes("RANK moved up") === true) {
+                                cssResult = 'rank-up';
+                                htmlSymbol = '8679';
+                            }
+                            if (output.data.Description.includes("Recovered from Recycle") === true) {
+                                cssResult = 'recycle-removed';
+                                htmlSymbol = '9851';
+                            }
+                            if (output.data.Description.includes("Moved to Recycle") === true) {
+                                cssResult = 'recycle-added';
+                                htmlSymbol = '9851';
+                            }
+                            if (output.data.Description.includes("DISCUSSION removed") === true || output.data.Description.includes("NAME") === true) {
+                                cssResult = 'discussion-removed';
+                                htmlSymbol = '9990';
+                            }
+                            if (output.data.Description.includes("DISCUSSION added") === true) {
+                                cssResult = 'discussion-added';
+                                htmlSymbol = '9990';
+                            }
+                            if (output.data.Description.includes("REASON removed") === true) {
+                                cssResult = 'blocked-reason-removed';
+                                htmlSymbol = '2600';
+                            }
+                            if (output.data.Description.includes("REASON added") === true) {
+                                cssResult = 'blocked-reason-added';
+                                htmlSymbol = '9998';
+                            }
+                            if (output.data.Description.includes("BLOCKED changed from [true]") === true) {
+                                cssResult = 'blocked-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("BLOCKED changed from [false]") === true) {
+                                cssResult = 'blocked-true';
+                                htmlSymbol = '9729';
+                            }
+                            if (output.data.Description.includes("FEATURE") === true) {
+                                cssResult = 'feature';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("TEST CASE") === true) {
+                                cssResult = 'test-added';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("OWNER") === true || output.data.Description.includes("NAMM") === true) {
+                                cssResult = 'owner';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("READY changed from [false]") === true) {
+                                cssResult = 'ready-true';
+                                htmlSymbol = '9734';
+                            }
+                            if (output.data.Description.includes("READY changed from [true]") === true) {
+                                cssResult = 'ready-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("EXPEDITE changed from [false]") === true) {
+                                cssResult = 'expedite-true';
+                                htmlSymbol = '9734';
+                            }
+                            if (output.data.Description.includes("EXPEDITE changed from [true]") === true) {
+                                cssResult = 'expedite-false';
+                                htmlSymbol = '9728';
+                            }
+                            if (output.data.Description.includes("ITERATION") === true || output.data.Description.includes("RELEASE") === true) {
+                                cssResult = 'iter-release';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("PLAN ESTIMATE") === true) {
+                                cssResult = 'plan-estimate';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("COLOR") === true || output.data.Description.includes("TASK") === true) {
+                                cssResult = 'colour';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("DESCRIPTION") === true || output.data.Description.includes("NOTES") === true || output.data.Description.includes("ACCEPTANCE CRITERIA") === true || output.data.Description.includes("TAGS") === true) {
+                                cssResult = 'desc-added';
+                                htmlSymbol = '9758';
+                            }
+                            if (output.data.Description.includes("Original") === true) {
+                                cssResult = 'Original';
+                                htmlSymbol = '9827';
+                            }
+                            if (output.data.Description.includes("to [Backlog]") === true) {
+                                cssResult = 'Backlog';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Defined]") === true) {
+                                cssResult = 'Defined';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [In-Progress") === true) {
+                                cssResult = 'In-Progress';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Completed") === true) {
+                                cssResult = 'Completed';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Accepted") === true) {
+                                cssResult = 'Accepted';
+                                htmlSymbol = '9744';
+                            }
+                            if (output.data.Description.includes("to [Live]") === true) {
+                                cssResult = 'Live';
+                                htmlSymbol = '9745';
+                            }
+                            html += '<div class="wrapper">';
+                            var numberDiv = '<div class="n-t n-' + cssResult + '">' + output.data.RevisionNumber + '</div>';
+                            var symbolDiv = '<div class="g-t"><span style="font-family:Wingdings">&#' + htmlSymbol + '</span></div>';
+                            var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.data.User._refObjectName + '</div>';
+                            var DescriptionDiv = '<div class="d-t d-' + cssResult + '">' + output.data.Description + '</div>';
+                            html += numberDiv + symbolDiv + authorDiv + DescriptionDiv;
+                            html += '</div>';
                         });
-                        return html.join('</br></br>');
-                    }
+                        return html;
+                    },
                 }
             ]
         });
 
-    }
-
+    },
 });
 
             Rally.launchApp('CustomApp', {
-                name:"Random App Name33805",
+                name:"Revision Data",
 	            parentRepos:""
             });
 
@@ -178,6 +387,297 @@
     <style type="text/css">
         .app {
   /* Add app styles here */
+}
+.x-mmm .x-grid-row .x-grid-data-row .x-grid-row-over {
+  background: black;
+}
+.wrapper {
+  display: flex;
+  margin-bottom: 1px;
+}
+.underline {
+  width: 100%;
+  height: 10px;
+}
+.n-t {
+  height: 100%;
+  width: 30px;
+  padding: 4px;
+  margin-right: 1px;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 20px;
+  font-size: 14px;
+}
+.a-t {
+  height: 100%;
+  width: 120px;
+  padding: 4px;
+  margin-right: 1px;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 20px;
+  font-size: 14px;
+}
+.name-t {
+  height: 100%;
+  padding: 4px;
+  flex: 2;
+  font-weight: bold;
+  text-align: left;
+  font-size: 14px;
+  border-radius: 20px;
+  padding: 4px 10px 4px 10px;
+  background: repeating-linear-gradient(45deg, #f6f6f6, #f6f6f6 10px, #efefef 10px, #efefef 20px);
+}
+.g-t {
+  height: 100%;
+  width: 30px;
+  padding: 4px;
+  font-weight: bold;
+  text-align: center;
+  font-size: 14px;
+}
+.d-t {
+  flex: 1;
+  height: 100%;
+  padding: 4px 10px 4px 10px;
+  width: 30px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.n-Original {
+  color: black;
+  background: #F0F0F0;
+}
+.d-Original {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #d2d2d2 10px, #d2d2d2 20px);
+}
+.n-Backlog {
+  color: black;
+  background: #F7C430;
+}
+.d-Backlog {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f7c430, #f7c430 10px, #f7c430 10px, #f7c430 20px);
+}
+.n-Defined {
+  color: black;
+  background: #F99221;
+}
+.d-Defined {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f99221, #f99221 10px, #f99221 10px, #f99221 20px);
+}
+.n-In-Progress {
+  color: black;
+  background: #E63B8A;
+}
+.d-In-Progress {
+  color: black;
+  background: repeating-linear-gradient(45deg, #e63b8a, #e63b8a 10px, #e63b8a 10px, #e63b8a 20px);
+}
+.n-Completed {
+  color: black;
+  background: #53C8F2;
+}
+.d-Completed {
+  color: black;
+  background: repeating-linear-gradient(45deg, #53c8f2, #53c8f2 10px, #53c8f2 10px, #53c8f2 20px);
+}
+.n-Accepted {
+  color: black;
+  background: #C0FF00;
+}
+.d-Accepted {
+  color: black;
+  background: repeating-linear-gradient(45deg, #c0ff00, #c0ff00 10px, #c0ff00 10px, #c0ff00 20px);
+}
+.n-Live {
+  color: black;
+  background: #C0FF00;
+}
+.d-Live {
+  color: black;
+  background: repeating-linear-gradient(45deg, #c0ff00, #c0ff00 10px, #c0ff00 10px, #c0ff00 20px);
+}
+.n-desc-added {
+  color: black;
+  background: #F3EF4B;
+}
+.d-desc-added {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-colour {
+  color: black;
+  background: #F3EF4B;
+}
+.d-colour {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-plan-estimate {
+  color: black;
+  background: #F3EF4B;
+}
+.d-plan-estimate {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-iter-release {
+  color: black;
+  background: #F3EF4B;
+}
+.d-iter-release {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-ready-true {
+  color: white;
+  background: #6CCA2C;
+}
+.d-ready-true {
+  color: white;
+  background: repeating-linear-gradient(-45deg, #6cca2c, #6cca2c 10px, #6cca2c 10px, #6cca2c 20px);
+}
+.n-ready-false {
+  color: black;
+  background: #6CCA2C;
+}
+.d-ready-false {
+  color: black;
+  background: repeating-linear-gradient(45deg, #6cca2c, #6cca2c 10px, #6cca2c 10px, #6cca2c 20px);
+}
+.n-expedite-true {
+  color: white;
+  background: #F51B1B;
+}
+.d-expedite-true {
+  color: white;
+  background: repeating-linear-gradient(-45deg, #f51b1b, #f51b1b 10px, #d81818 10px, #d81818 20px);
+}
+.n-expedite-false {
+  color: black;
+  background: #6CCA2C;
+}
+.d-expedite-false {
+  color: black;
+  background: repeating-linear-gradient(45deg, #6cca2c, #6cca2c 10px, #6cca2c 10px, #6cca2c 20px);
+}
+.n-owner {
+  color: black;
+  background: #F3EF4B;
+}
+.d-owner {
+  color: black;
+  background: repeating-linear-gradient(45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-feature {
+  color: white;
+  background: #E63B8A;
+}
+.d-feature {
+  color: white;
+  background: repeating-linear-gradient(45deg, #e63b8a, #e63b8a 10px, #e63b8a 10px, #e63b8a 20px);
+}
+.n-blocked-true {
+  color: white;
+  background: #F51B1B;
+}
+.d-blocked-true {
+  color: white;
+  background: repeating-linear-gradient(-45deg, #f51b1b, #f51b1b 10px, #d81818 10px, #d81818 20px);
+}
+.n-blocked-false {
+  color: black;
+  background: #6CCA2C;
+}
+.d-blocked-false {
+  color: black;
+  background: repeating-linear-gradient(45deg, #6cca2c, #6cca2c 10px, #6cca2c 10px, #6cca2c 20px);
+}
+.n-blocked-reason-removed {
+  color: white;
+  background: #C6D614;
+}
+.d-blocked-reason-removed {
+  color: white;
+  background: repeating-linear-gradient(45deg, #c6d614, #c6d614 10px, #b2c10f 10px, #b2c10f 20px);
+}
+.n-blocked-reason-added {
+  color: white;
+  background: #F51B1B;
+}
+.d-blocked-reason-added {
+  color: white;
+  background: repeating-linear-gradient(-45deg, #f51b1b, #f51b1b 10px, #d81818 10px, #d81818 20px);
+}
+.n-test-added {
+  color: black;
+  background: #F3EF4B;
+}
+.d-test-added {
+  color: black;
+  background: repeating-linear-gradient(-45deg, #f3ef4b, #f3ef4b 10px, #f3ef4b 10px, #f3ef4b 20px);
+}
+.n-discussion-added {
+  color: white;
+  background: #351B75;
+}
+.d-discussion-added {
+  color: white;
+  background: repeating-linear-gradient(45deg, #351b75, #351b75 10px, #351b75 10px, #351b75 20px);
+}
+.n-discussion-removed {
+  color: white;
+  background: #351B75;
+}
+.d-discussion-removed {
+  color: white;
+  background: repeating-linear-gradient(-45deg, #351b75, #351b75 10px, #351b75 10px, #351b75 20px);
+}
+.n-recycle-added {
+  color: white;
+  background: #2A95FF;
+}
+.d-recycle-added {
+  color: white;
+  background: repeating-linear-gradient(45deg, #2a95ff, #2a95ff 10px, #2589eb 10px, #2589eb 20px);
+}
+.n-recycle-removed {
+  color: white;
+  background: #2589EB;
+}
+.d-recycle-removed {
+  color: white;
+  background: repeating-linear-gradient(45deg, #2589eb, #2589eb 10px, #2a95ff 10px, #2a95ff 20px);
+}
+.n-rank-up {
+  color: black;
+  background: #FFD300;
+}
+.d-rank-up {
+  color: black;
+  background: repeating-linear-gradient(45deg, #ffd300, #ffd300 10px, #f4ca00 10px, #f4ca00 20px);
+}
+.n-rank-down {
+  color: black;
+  background: #FF9500;
+}
+.d-rank-down {
+  color: black;
+  background: repeating-linear-gradient(45deg, #ff9500, #ff9500 10px, #ee8b00 10px, #ee8b00 20px);
+}
+.n-kanban {
+  color: black;
+  background: #7D64B1;
+}
+.d-kanban {
+  color: black;
+  background: repeating-linear-gradient(45deg, #7d64b1, #7d64b1 10px, #7d64b1 10px, #7d64b1 20px);
 }
 
     </style>

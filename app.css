@@ -293,3 +293,11 @@
     color: black;
     background: repeating-linear-gradient(45deg,#7D64B1,#7D64B1 10px,#7D64B1 10px,#7D64B1 20px);
 }
+.n-live-date {
+    color: black;
+    background: #C0FF00;
+}
+.d-live-date {
+    color: black;
+    background: repeating-linear-gradient(45deg,#C0FF00,#C0FF00 10px,#BDFB00 10px,#BDFB00 20px);
+}

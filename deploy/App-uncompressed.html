@@ -36,7 +36,7 @@
             labelAlign: 'right',
             width: 400,
             listeners: {
-                //ready: me._loadData, // initialization flow: next, load severities
+                ready: me._loadData, // initialization flow: next, load severities
                 select: me._loadData, // user interactivity: when they choose a value, (re)load the data
                 scope: me
             }
@@ -44,39 +44,55 @@
 
         this.down('#pulldown-container').add(iterComboBox); // add the iteration list to the pulldown container so it lays out horiz, not the app!
     },
-    _loadData: function(){
+    _loadData: function () {
         console.log('\033[2J'); // clear the console
 
-        var selectedIterRef = this.down('#iteration-combobox').getRecord().get('_ref'); 
+        var selectedIterRef = this.down('#iteration-combobox').getRecord().get('_ref');
         var myFilters = this._getFilters(selectedIterRef);
-        var artifacts = Ext.create('Rally.data.wsapi.Store', {
-            model: 'User Story',
-            autoLoad: true,
-            filters: myFilters,
-            limit: Infinity,
-            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
-        });
-        artifacts.load().then({
-            success: this._getRevHistoryModel,
-            scope: this
-        }).then({
-            success: this._onRevHistoryModelCreated,
-            scope: this
-        }).then({
-            success: this._onModelLoaded,
-            scope: this
-        }).then({
-            success: this._stitchDataTogether,
-            scope: this
-        }).then({
-            success: function (results) {
-                this._makeGrid(results);
-            },
-            scope: this,
-            failure: function () {
-                console.log("There's a rattle in the manifold...");
-            }
-        });
+        if (this.switch) {
+            console.log('store exists');
+            this.artifacts.setFilter(myFilters);
+            this.artifacts.load();
+            // create store
+        } else {
+            console.log('new store');
+            this.artifacts = Ext.create('Rally.data.wsapi.Store', {
+                model: 'User Story',
+                autoLoad: true,
+                filters: myFilters,
+                limit: Infinity,
+                fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
+                listeners: {
+                    load: function () {
+                        this.switch = this.artifacts;
+                    },
+                    scope: this
+                }
+            });
+            this.artifacts.load().then({
+                success: this._getRevHistoryModel,
+                scope: this
+            }).then({
+                success: this._onRevHistoryModelCreated,
+                scope: this
+            }).then({
+                success: this._onModelLoaded,
+                scope: this
+            }).then({
+                success: this._stitchDataTogether,
+                scope: this
+            }).then({
+                success: function (results) {
+                    if (!this.grid) {
+                        this._makeGrid(results);
+                    }
+                },
+                scope: this,
+                failure: function () {
+                    console.log("There's a rattle in the manifold...");
+                },
+            });
+        }
     },
     _getFilters: function (iterationValue) {
         var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
@@ -153,8 +169,7 @@
 
     _makeGrid: function (artifactsWithRevs) {
         console.log('@ G');
-        this.add({
-            xtype: 'rallygrid',
+        this.grid = Ext.create('Rally.ui.grid.Grid', {
             store: Ext.create('Rally.data.custom.Store', {
                 data: artifactsWithRevs
             }),
@@ -273,7 +288,7 @@
                                 cssResult = 'blocked-reason-removed';
                                 htmlSymbol = '2600';
                             }
-                            if (output.data.Description.includes("REASON added") === true) {
+                            if (output.data.Description.includes("REASON added") === true || output.data.Description.includes("BLOCKED REASON") === true) {
                                 cssResult = 'blocked-reason-added';
                                 htmlSymbol = '9998';
                             }
@@ -370,7 +385,7 @@
                 }
             ]
         });
-
+        this.add(this.grid);
     },
 });
 

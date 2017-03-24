@@ -19,72 +19,51 @@ Ext.define('CustomApp', {
             }
         }
     ],
-    launch: function () {
-        this._getScheduleState();
-    },
-    _loadData: function () {
-        console.log('\033[2J'); // clear the console
-        var me = this;
 
-        // lookup what the user chose from each pulldown
-        var ScheduleState = this.down('#ScheduleStateCombobox').getRecord().get('value'); // remember to console log the record to see the raw data and relize what you can pluck out
-        // filters to send to Rally during the store load
-        var myFilters = this._getFilters(ScheduleState);
-
-
-        if (me._myStore) {
-            me._myStore.setFilter(myFilters);
-            me._myStore._buildModel();
-        } else {
-            me.myStore = Ext.create('Rally.data.wsapi.Store', {
-                model: 'UserStory',
-                autoLoad: true,
-                filters: myFilters,
-                listeners: {
-                    load: function (myStore, myData, success) {
-                        if (!me.myGrid) { // only create a grid if it does NOT already exist
-                            me._getRevHistoryModel(myStore, myData, success);
-                            me._onRevHistoryModelCreated(myStore, myData, success);
-                            //me._onModelLoaded(myStore, myData, success);
-                            //me._stitchDataTogether(myStore, myData, success);
-                            //me._createGrid(myStore,myData, success);
-                        }
-                    },
-                    scope: me
-                },
-                fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
-            });
-        }
-    },
-
-    _getFilters: function (ScheduleState) {
-        var f = Ext.create('Rally.data.wsapi.Filter', {
+    _getFilters: function () {
+        var filterAccepted = Ext.create('Rally.data.wsapi.Filter', {
             property: 'ScheduleState',
             operation: '=',
-            value: ScheduleState
+            value: 'Accepted'
         });
-        console.log('Schedule State Filter ', f);
-        return f;
-    },
-    _getScheduleState: function () {
-        var ScheduleStateCombobox = Ext.create('Ext.Container', {
-            items: [{
-                itemId: 'ScheduleStateCombobox',
-                fieldLabel: 'Schedule State',
-                labelAlign: 'right',
-                width: 400,
-                xtype: 'rallyfieldvaluecombobox',
-                model: 'User Story',
-                field: 'ScheduleState',
-                listeners: {
-                    ready: this._loadData,
-                    select: this._loadData,
-                    scope: this
-                }
-            }],
 
+        var filterLive = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: 'Live'
         });
-        this.down('#pulldown-container').add(ScheduleStateCombobox); // add the iteration list to the pulldown container so it lays out horiz, not the app!
+        return filterAccepted.or(filterLive);
+    },
+    launch: function () {
+        console.log('\033[2J'); // clear the console
+        //var today = new Date().toISOString();
+        var that = this;
+        var artifacts = Ext.create('Rally.data.wsapi.Store', {
+            model: 'UserStory',
+            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
+            autoLoad: true,
+            filters: this._getFilters(),
+        });
+        artifacts.load().then({
+            success: this._getRevHistoryModel,
+            scope: this
+        }).then({
+            success: this._onRevHistoryModelCreated,
+            scope: this
+        }).then({
+            success: this._onModelLoaded,
+            scope: this
+        }).then({
+            success: this._stitchDataTogether,
+            scope: this
+        }).then({
+            success: function (results) {
+                that._createGrid(results);
+            },
+            failure: function () {
+                console.log("oh noes!");
+            }
+        });
     },
     _getRevHistoryModel: function (myStore) {
         this._myStore = myStore;
@@ -165,31 +144,36 @@ Ext.define('CustomApp', {
                     text: 'Schedule State',
                     dataIndex: 'artifact',
                     renderer: function (output) {
-
                         var html, cssResult;
                         html = '';
-
-                        if (output.ScheduleState.includes("Backlog") === true) {
-                            cssResult = 'Backlog';
-                        }
-                        if (output.ScheduleState.includes("Defined") === true) {
-                            cssResult = 'Defined';
-                        }
-                        if (output.ScheduleState.includes("In-Progress") === true) {
-                            cssResult = 'In-Progress';
-                        }
-                        if (output.ScheduleState.includes("Completed") === true) {
-                            cssResult = 'Completed';
-                        }
-                        if (output.ScheduleState.includes("Accepted") === true) {
-                            cssResult = 'Accepted';
-                        }
-                        if (output.ScheduleState.includes("Live") === true) {
-                            cssResult = 'Live';
+                        switch (true) {
+                            case (output.ScheduleState.indexOf("Backlog") !== -1):
+                                cssResult = 'Backlog';
+                                console.log(' CSS Backlog ', cssResult);
+                                break;
+                            case (output.ScheduleState.indexOf("Defined") !== -1):
+                                cssResult = 'Defined';
+                                console.log(' CSS Defined ', cssResult);
+                                break;
+                            case (output.ScheduleState.indexOf("In-Progress") !== -1):
+                                cssResult = 'In-Progress';
+                                console.log(' CSS In-Progress ', cssResult);
+                                break;
+                            case (output.ScheduleState.indexOf("Completed") !== -1):
+                                cssResult = 'Completed';
+                                console.log(' CSS Completed ', cssResult);
+                                break;
+                            case (output.ScheduleState.indexOf("Accepted") !== -1):
+                                cssResult = 'Accepted';
+                                console.log(' CSS Accepted ', cssResult);
+                                break;
+                            case (output.ScheduleState.indexOf("Live") !== -1):
+                                cssResult = 'Live';
+                                console.log(' CSS Live ', cssResult);
+                                break;
                         }
                         html += '<div class="wrapper">';
-
-                        var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.ScheduleState + '</div>';
+                        var authorDiv = '<div class="a-t ' + cssResult + '">' + output.ScheduleState + '</div>';
                         html += authorDiv;
                         html += '</div>';
                         return html; //;
@@ -231,131 +215,247 @@ Ext.define('Builder', {
     _go: function (output) {
         var html, cssResult, icon;
         html = '';
-        if (output.data.Description.includes("LIVE") === true) {
-            cssResult = 'live-date';
-            icon = 'icon-deploy';
+
+        cssResult = 'white-black';
+        icon = 'icon-info';
+        
+        switch (true) {
+            case (output.data.Description.indexOf("MILESTONE") !== -1):
+                cssResult = 'purple-white';
+                icon = 'icon-calendar';
+                break;
         }
-        if (output.data.Description.includes("KANBAN") === true) {
-            cssResult = 'kanban';
-            icon = 'icon-board';
+        switch (true) {
+            case (output.data.Description.indexOf("DEFECTS added") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-defect';
+                break;
+            case (output.data.Description.indexOf("DEFECT added") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-defect';
+                break;
+            case (output.data.Description.indexOf("DEFECTS removed") !== -1):
+                cssResult = 'yellow-black';
+                icon = 'icon-defect';
+                break;
+            case (output.data.Description.indexOf("DEFECT removed") !== -1):
+                cssResult = 'yellow-black';
+                icon = 'icon-defect';
+                break;
+            case (output.data.Description.indexOf("DEFECTS STATUS") !== -1):
+                cssResult = 'burnt-orange-black';
+                icon = 'icon-defect';
+                break;
+            case (output.data.Description.indexOf("DEFECT STATUS") !== -1):
+                cssResult = 'burnt-orange-black';
+                icon = 'icon-defect';
+                break;
         }
-        if (output.data.Description.includes("RANK moved down") === true) {
-            cssResult = 'rank-down';
-            icon = 'icon-arrow-down';
+        switch (true) {
+            case (output.data.Description.indexOf("SUCCESSORS") !== -1):
+                cssResult = 'teal-white';
+                icon = 'icon-predecessor';
+                break;
+            case (output.data.Description.indexOf("PREDECESSORS") !== -1):
+                cssResult = 'teal-white';
+                icon = 'icon-predecessor';
+                break;
         }
-        if (output.data.Description.includes("RANK moved up") === true) {
-            cssResult = 'rank-up';
-            icon = 'icon-arrow-up';
+        switch (true) {
+            case (output.data.Description.indexOf("BLOCKED changed from [false]") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-blocked';
+                break;
+            case (output.data.Description.indexOf("BLOCKED changed from [true]") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-thumbs-up';
+                break;
+            case (output.data.Description.indexOf("BLOCKED REASON removed") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-thumbs-up';
+                break;
+            case (output.data.Description.indexOf("BLOCKED REASON added") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-blocked';
+                break;
+            case (output.data.Description.indexOf("BLOCKED REASON changed") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-blocked';
+                break;
         }
-        if (output.data.Description.includes("Recovered from Recycle") === true) {
-            cssResult = 'recycle-removed';
-            icon = 'icon-recycle';
+        switch (true) {
+            case (output.data.Description.indexOf("OWNER") !== -1):
+                cssResult = 'light-orange-black';
+                icon = 'icon-user';;
+                break;
         }
-        if (output.data.Description.includes("Moved to Recycle") === true) {
-            cssResult = 'recycle-added';
-            icon = 'icon-recycle';
+        switch (true) {
+            case (output.data.Description.indexOf("FEATURE") !== -1):
+                cssResult = 'pink-white';
+                icon = 'icon-portfolio';
+                break;
+            case (output.data.Description.indexOf("TEST CASE") !== -1):
+                cssResult = 'purple-white';
+                icon = 'icon-test';
+                break;
         }
-        if (output.data.Description.includes("DISCUSSION removed") === true || output.data.Description.includes("NAME") === true) {
-            cssResult = 'discussion-removed';
-            icon = 'icon-comment';
+        switch (true) {
+            case (output.data.Description.indexOf("READY changed from [false]") !== -1):
+                cssResult = 'bad-removed';
+                icon = 'icon-thumbs-up';
+                break;
+            case (output.data.Description.indexOf("READY changed from [true]") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-cancel';
+                break;
         }
-        if (output.data.Description.includes("DISCUSSION added") === true) {
-            cssResult = 'discussion-added';
-            icon = 'icon-comment';
+        switch (true) {
+            case (output.data.Description.indexOf("EXPEDITE changed from [false]") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-post';
+                break;
+            case (output.data.Description.indexOf("EXPEDITE changed from [true]") !== -1):
+                cssResult = 'red-white';
+                icon = 'icon-post';
+                break;
         }
-        if (output.data.Description.includes("REASON removed") === true) {
-            cssResult = 'blocked-reason-removed';
-            icon = 'icon-thumbs-up';
+        switch (true) {
+            case (output.data.Description.indexOf("ITERATION") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-empty';
+                break;
+            case (output.data.Description.indexOf("RELEASE") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-empty';
+                break;
         }
-        if (output.data.Description.includes("REASON added") === true || output.data.Description.includes("BLOCKED REASON") === true) {
-            cssResult = 'blocked-reason-added';
-            icon = 'icon-blocked';
+        switch (true) {
+            case (output.data.Description.indexOf("PROJECT") !== -1):
+                cssResult = 'purple-white';
+                icon = 'icon-hierarchy';
+                break;
+            case (output.data.Description.indexOf("PLAN ESTIMATE") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-bars';
+                break;
+            case (output.data.Description.indexOf("COLOR") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-color';
+                break;
+            case (output.data.Description.indexOf("NAME") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("DESCRIPTION") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("DISCUSSION removed") !== -1):
+                cssResult = 'yellow-black';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("DISCUSSION added") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("NOTES") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("ACCEPTANCE") !== -1):
+                cssResult = 'Accepted';
+                icon = 'icon-comment';
+                break;
+            case (output.data.Description.indexOf("TAGS") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-addTag';
+                break;
         }
-        if (output.data.Description.includes("BLOCKED changed from [true]") === true) {
-            cssResult = 'blocked-false';
-            icon = 'icon-thumbs-up';
+        switch (true) {
+            case (output.data.Description.indexOf("TASK ESTIMATE TOTAL changed") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-to-do';
+                break;
+            case (output.data.Description.indexOf("TASK REMAINING TOTAL changed") !== -1):
+                cssResult = 'white-black';
+                icon = 'icon-to-do';
+                break;
+            case (output.data.Description.indexOf("TASK added") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-task';
+                break;
+            case (output.data.Description.indexOf("TASKS added") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-task';
+                break;
+            case (output.data.Description.indexOf("TASK STATUS") !== -1):
+                cssResult = 'green-black';
+                icon = 'icon-task';
+                break;
         }
-        if (output.data.Description.includes("BLOCKED changed from [false]") === true) {
-            cssResult = 'blocked-true';
-            icon = 'icon-blocked';
+        switch (true) {
+            case (output.data.Description.indexOf("RANK moved down") !== -1):
+                cssResult = 'burnt-orange-black';
+                icon = 'icon-arrow-down';
+                break;
+            case (output.data.Description.indexOf("RANK moved up") !== -1):
+                cssResult = 'light-orange-black';
+                icon = 'icon-arrow-up';
+                break;
         }
-        if (output.data.Description.includes("FEATURE") === true) {
-            cssResult = 'feature';
-            icon = 'icon-portfolio';
+        switch (true) {
+            case (output.data.Description.indexOf("Original") !== -1):
+                cssResult = 'black-orange';
+                icon = 'icon-comment';
+                break;
         }
-        if (output.data.Description.includes("TEST CASE") === true) {
-            cssResult = 'test-added';
-            icon = 'icon-test';
+        switch (true) {
+            case (output.data.Description.indexOf("to [Backlog]") !== -1):
+                cssResult = 'Backlog';
+                icon = 'icon-cone';
+                break;
+            case (output.data.Description.indexOf("to [Defined]") !== -1):
+                cssResult = 'Defined';
+                icon = 'icon-cone';
+                break;
+            case (output.data.Description.indexOf("to [In-Progress]") !== -1):
+                cssResult = 'In-Progress';
+                icon = 'icon-cone';
+                break;
+            case (output.data.Description.indexOf("to [Completed]") !== -1):
+                cssResult = 'Completed';
+                icon = 'icon-cone';
+                break;
+            case (output.data.Description.indexOf("to [Accepted]") !== -1):
+                cssResult = 'Accepted';
+                icon = 'icon-ok';
+                break;
+            case (output.data.Description.indexOf("to [Live]") !== -1):
+                cssResult = 'Live';
+                icon = 'icon-deploy';
+                break;
+            case (output.data.Description.indexOf("KANBAN") !== -1):
+                cssResult = 'move-white';
+                icon = 'icon-board';
+                break;
         }
-        if (output.data.Description.includes("OWNER") === true || output.data.Description.includes("NAMM") === true) {
-            cssResult = 'owner';
-            icon = 'icon-user';
+        switch (true) {
+            case (output.data.Description.indexOf("Recovered from Recycle") !== -1):
+                cssResult = 'white-blue';
+                icon = 'icon-recycle';
+                break;
+            case (output.data.Description.indexOf("Moved to Recycle") !== -1):
+                cssResult = 'white-blue';
+                icon = 'icon-recycle';
+                break;
         }
-        if (output.data.Description.includes("READY changed from [false]") === true) {
-            cssResult = 'ready-true';
-            icon = 'icon-thumbs-up';
-        }
-        if (output.data.Description.includes("READY changed from [true]") === true) {
-            cssResult = 'ready-false';
-            icon = 'icon-cancel';
-        }
-        if (output.data.Description.includes("EXPEDITE changed from [false]") === true) {
-            cssResult = 'expedite-true';
-            icon = 'icon-post';
-        }
-        if (output.data.Description.includes("EXPEDITE changed from [true]") === true) {
-            cssResult = 'expedite-false';
-            icon = 'icon-post';
-        }
-        if (output.data.Description.includes("ITERATION") === true || output.data.Description.includes("RELEASE") === true) {
-            cssResult = 'iter-release';
-            icon = 'icon-empty';
-        }
-        if (output.data.Description.includes("PLAN ESTIMATE") === true) {
-            cssResult = 'plan-estimate';
-            icon = 'icon-bars';
-        }
-        if (output.data.Description.includes("COLOR") === true || output.data.Description.includes("TASK") === true) {
-            cssResult = 'colour';
-            icon = 'icon-color';
-        }
-        if (output.data.Description.includes("DESCRIPTION") === true || output.data.Description.includes("NOTES") === true || output.data.Description.includes("ACCEPTANCE CRITERIA") === true || output.data.Description.includes("TAGS") === true) {
-            cssResult = 'desc-added';
-            icon = 'icon-comment';
-        }
-        if (output.data.Description.includes("Original") === true) {
-            cssResult = 'Original';
-            icon = 'icon-idea';
-        }
-        if (output.data.Description.includes("to [Backlog]") === true) {
-            cssResult = 'Backlog';
-            icon = 'icon-cone';
-        }
-        if (output.data.Description.includes("to [Defined]") === true) {
-            cssResult = 'Defined';
-            icon = 'icon-cone';
-        }
-        if (output.data.Description.includes("to [In-Progress") === true) {
-            cssResult = 'In-Progress';
-            icon = 'icon-cone';
-        }
-        if (output.data.Description.includes("to [Completed") === true) {
-            cssResult = 'Completed';
-            icon = 'icon-cone';
-        }
-        if (output.data.Description.includes("to [Accepted") === true) {
-            cssResult = 'Accepted';
-            icon = 'icon-ok';
-        }
-        if (output.data.Description.includes("to [Live]") === true) {
-            cssResult = 'Live';
-            icon = 'icon-deploy';
-        }
+
+
         html += '<div class="wrapper">';
-        var numberDiv = '<div class="n-t n-' + cssResult + '">' + output.data.RevisionNumber + '</div>';
-        var symbolDiv = '<div class="g-t"><span class="' + icon + '"></span></div>';
-        var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.data.User._refObjectName + '</div>';
-        var DescriptionDiv = '<div class="d-t d-' + cssResult + '">' + output.data.Description + '</div>';
+        var numberDiv = '<div class="n-t ' + cssResult + '">' + output.data.RevisionNumber + '</div>';
+        var symbolDiv = '<div class="i-t ' + cssResult + '"><span class="' + icon + '"></span></div>';
+        var authorDiv = '<div class="a-t ' + cssResult + '">' + output.data.User._refObjectName + '</div>';
+        var DescriptionDiv = '<div class="d-t ' + cssResult + '">' + output.data.Description + '</div>';
         html += numberDiv + symbolDiv + authorDiv + DescriptionDiv;
         html += '</div>';
 

@@ -1,7 +1,8 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
-    _artifacts: [],
+    myStore: undefined,
+    myGrid: undefined,
 
     // TODO
     // Look at creation date delta?
@@ -21,8 +22,50 @@ Ext.define('CustomApp', {
     launch: function () {
         this._getScheduleState();
     },
+    _loadData: function () {
+        console.log('\033[2J'); // clear the console
+        var me = this;
 
-    // create and load iteration pulldown 
+        // lookup what the user chose from each pulldown
+        var ScheduleState = this.down('#ScheduleStateCombobox').getRecord().get('value'); // remember to console log the record to see the raw data and relize what you can pluck out
+        // filters to send to Rally during the store load
+        var myFilters = this._getFilters(ScheduleState);
+
+
+        if (me._myStore) {
+            me._myStore.setFilter(myFilters);
+            me._myStore._buildModel();
+        } else {
+            me.myStore = Ext.create('Rally.data.wsapi.Store', {
+                model: 'UserStory',
+                autoLoad: true,
+                filters: myFilters,
+                listeners: {
+                    load: function (myStore, myData, success) {
+                        if (!me.myGrid) { // only create a grid if it does NOT already exist
+                            me._getRevHistoryModel(myStore, myData, success);
+                            me._onRevHistoryModelCreated(myStore, myData, success);
+                            //me._onModelLoaded(myStore, myData, success);
+                            //me._stitchDataTogether(myStore, myData, success);
+                            //me._createGrid(myStore,myData, success);
+                        }
+                    },
+                    scope: me
+                },
+                fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
+            });
+        }
+    },
+
+    _getFilters: function (ScheduleState) {
+        var f = Ext.create('Rally.data.wsapi.Filter', {
+            property: 'ScheduleState',
+            operation: '=',
+            value: ScheduleState
+        });
+        console.log('Schedule State Filter ', f);
+        return f;
+    },
     _getScheduleState: function () {
         var ScheduleStateCombobox = Ext.create('Ext.Container', {
             items: [{
@@ -43,71 +86,15 @@ Ext.define('CustomApp', {
         });
         this.down('#pulldown-container').add(ScheduleStateCombobox); // add the iteration list to the pulldown container so it lays out horiz, not the app!
     },
-    _loadData: function (artifacts) {
-        console.log(Rally.ui.notify.Notifier.show({
-            message: 'Notification Message'
-        }));
-        console.log('\033[2J'); // clear the console
-        console.log(this.down('#ScheduleStateCombobox').getRecord());
-
-
-        var myFilters = this._getFilters(this.down('#ScheduleStateCombobox').getRecord().get('value'));
-        
-        
-        artifacts = Ext.create('Rally.data.wsapi.Store', {
-            model: 'User Story',
-            autoLoad: true,
-            filters: myFilters,
-            limit: Infinity,
-            fetch: ['ObjectID', 'FormattedID', 'Name', 'RevisionHistory', 'Revisions', 'Description', 'User', 'ScheduleState'],
-            listeners: {
-                load: function () {},
-                scope: this
-            }
-        });
-        artifacts.load().then({
-            success: this._getRevHistoryModel,
-            scope: this
-        }).then({
-            success: this._onRevHistoryModelCreated,
-            scope: this
-        }).then({
-            success: this._onModelLoaded,
-            scope: this
-        }).then({
-            success: this._stitchDataTogether,
-            scope: this
-        }).then({
-            success: function (results) {
-                this.grid = undefined;
-                    this._makeGrid(results);      // if we did NOT pass scope:this below, this line would be incorrectly trying to call _createGrid() on the store which does not exist.
-            },
-            scope: this,
-            failure: function () {
-                console.log("There's a rattle in the manifold...");
-            },
-        });
-
-    },
-    _getFilters: function (ScheduleState) {
-        var f = Ext.create('Rally.data.wsapi.Filter', {
-            property: 'ScheduleState',
-            operation: '=',
-            value: ScheduleState
-        });
-        console.log(f);
-        return f;
-    },
-    _getRevHistoryModel: function (artifacts) {
-        this._artifacts = artifacts;
+    _getRevHistoryModel: function (myStore) {
+        this._myStore = myStore;
         return Rally.data.ModelFactory.getModel({
             type: 'RevisionHistory'
         });
     },
     _onRevHistoryModelCreated: function (model) {
-        console.log(model);
         var promises = [];
-        _.each(this._artifacts, function (artifact) {
+        _.each(this._myStore, function (artifact) {
             var ref = artifact.get('RevisionHistory')._ref;
             promises.push(model.load(Rally.util.Ref.getOidFromRef(ref)));
         });
@@ -126,27 +113,26 @@ Ext.define('CustomApp', {
         return Deft.Promise.all(promises);
     },
     _stitchDataTogether: function (revhistories) {
-        console.log(5, revhistories.length, ' ', revhistories);
 
-        var artifactsWithRevs = [];
-        _.each(this._artifacts, function (artifact) {
-            artifactsWithRevs.push({
+        var myStoreWithRevs = [];
+        _.each(this._myStore, function (artifact) {
+            myStoreWithRevs.push({
                 artifact: artifact.data
             });
         });
         var i = 0;
         _.each(revhistories, function (revisions) {
-            artifactsWithRevs[i].revisions = revisions;
+            myStoreWithRevs[i].revisions = revisions;
             i++;
         });
-        return artifactsWithRevs;
+        return myStoreWithRevs;
 
     },
 
-    _makeGrid: function (artifactsWithRevs) {
-        var grid = Ext.create('Rally.ui.grid.Grid', {
+    _createGrid: function (myStoreWithRevs) {
+        this.myGrid = Ext.create('Rally.ui.grid.Grid', {
             store: Ext.create('Rally.data.custom.Store', {
-                data: artifactsWithRevs
+                data: myStoreWithRevs
             }),
             columnCfgs: [{
                     text: 'FormattedID',
@@ -228,24 +214,20 @@ Ext.define('CustomApp', {
                     flex: 1,
                     cls: 'test',
                     renderer: function (value) {
-                        for (var x = 0; x < value.length; x++) {
-                            return Ext.create('Builder')._go(value[x]);
-                        }
+                        var html = '';
+                        _.each(value, function (output) {
+                            html += Ext.create('Builder')._go(output);
+                        });
+                        return html;
                     }
                 }
             ]
         });
-        this.add(grid);
+        this.add(this.myGrid);
     },
 });
 
 Ext.define('Builder', {
-
-    _icons: function (x) {
-        var icon = ['icon-add', 'icon-add-column', 'icon-addTag', 'icon-admin', 'icon-archive', 'icon-arrow-down', 'icon-arrow-left', 'icon-arrow-right', 'icon-arrow-up', 'icon-attachment', 'icon-back', 'icon-bars', 'icon-bell', 'icon-blocked', 'icon-board', 'icon-box', 'icon-calendar', 'icon-cancel', 'icon-change-set', 'icon-chat', 'icon-chevron-down', 'icon-chevron-left', 'icon-chevron-right', 'icon-chevron-up', 'icon-children', 'icon-circle', 'icon-close', 'icon-collapse', 'icon-color', 'icon-comment', 'icon-cone', 'icon-cross', 'icon-dashboard', 'icon-defect', 'icon-defectSuite', 'icon-delete', 'icon-deploy', 'icon-donut', 'icon-dots', 'icon-down', 'icon-down_full', 'icon-down_hollow', 'icon-download', 'icon-drag', 'icon-dropdown', 'icon-edit', 'icon-embed', 'icon-empty', 'icon-enlarge', 'icon-expand', 'icon-export', 'icon-favorite', 'icon-feedback', 'icon-file', 'icon-filter', 'icon-fiveDots', 'icon-flag', 'icon-folder', 'icon-full-arrow-down', 'icon-full-arrow-left', 'icon-full-arrow-right', 'icon-full-arrow-up', 'icon-gear', 'icon-graph', 'icon-grid', 'icon-help', 'icon-hierarchy', 'icon-history', 'icon-home', 'icon-hourglass', 'icon-idea', 'icon-images', 'icon-infinity', 'icon-info', 'icon-info-circle', 'icon-leaf', 'icon-leave', 'icon-left', 'icon-line', 'icon-link', 'icon-lock', 'icon-lock-open', 'icon-mail', 'icon-minus', 'icon-more', 'icon-next', 'icon-none', 'icon-not-favorite', 'icon-ok', 'icon-partial', 'icon-pie', 'icon-plus', 'icon-popup', 'icon-portfolio', 'icon-post', 'icon-predecessor', 'icon-previous', 'icon-print', 'icon-program', 'icon-progress', 'icon-question', 'icon-ready', 'icon-recycle', 'icon-refresh', 'icon-reply-all', 'icon-right', 'icon-right_full', 'icon-right_hollow', 'icon-rss', 'icon-save', 'icon-scope-down', 'icon-scope-up', 'icon-scope-up-down', 'icon-search', 'icon-setup', 'icon-share', 'icon-shrink', 'icon-small-chevron-down', 'icon-small-chevron-left', 'icon-small-chevron-right', 'icon-small-chevron-up', 'icon-snapshot', 'icon-split', 'icon-square', 'icon-story', 'icon-successor', 'icon-tag', 'icon-task', 'icon-test', 'icon-test-run', 'icon-testCase', 'icon-testSet', 'icon-threeDots', 'icon-thumbs-down', 'icon-thumbs-up', 'icon-to-do', 'icon-triangle', 'icon-up', 'icon-upload', 'icon-user', 'icon-user-add', 'icon-users', 'icon-visible', 'icon-warning', 'icon-workspace'];
-       
-        return icon[x];
-    },
     _go: function (output) {
         var html, cssResult, icon;
         html = '';
@@ -371,7 +353,7 @@ Ext.define('Builder', {
         }
         html += '<div class="wrapper">';
         var numberDiv = '<div class="n-t n-' + cssResult + '">' + output.data.RevisionNumber + '</div>';
-        var symbolDiv = '<div class="g-t"><span class="'+icon+'"></span></div>';
+        var symbolDiv = '<div class="g-t"><span class="' + icon + '"></span></div>';
         var authorDiv = '<div class="a-t d-' + cssResult + '">' + output.data.User._refObjectName + '</div>';
         var DescriptionDiv = '<div class="d-t d-' + cssResult + '">' + output.data.Description + '</div>';
         html += numberDiv + symbolDiv + authorDiv + DescriptionDiv;

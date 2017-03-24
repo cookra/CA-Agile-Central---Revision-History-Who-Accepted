@@ -49,7 +49,11 @@ Ext.define('CustomApp', {
         }));
         console.log('\033[2J'); // clear the console
         console.log(this.down('#ScheduleStateCombobox').getRecord());
+
+
         var myFilters = this._getFilters(this.down('#ScheduleStateCombobox').getRecord().get('value'));
+        
+        
         artifacts = Ext.create('Rally.data.wsapi.Store', {
             model: 'User Story',
             autoLoad: true,
@@ -75,7 +79,8 @@ Ext.define('CustomApp', {
             scope: this
         }).then({
             success: function (results) {
-                this._makeGrid(results);
+                this.grid = undefined;
+                    this._makeGrid(results);      // if we did NOT pass scope:this below, this line would be incorrectly trying to call _createGrid() on the store which does not exist.
             },
             scope: this,
             failure: function () {
@@ -100,6 +105,7 @@ Ext.define('CustomApp', {
         });
     },
     _onRevHistoryModelCreated: function (model) {
+        console.log(model);
         var promises = [];
         _.each(this._artifacts, function (artifact) {
             var ref = artifact.get('RevisionHistory')._ref;

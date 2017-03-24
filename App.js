@@ -144,8 +144,7 @@ Ext.define('CustomApp', {
     },
 
     _makeGrid: function (artifactsWithRevs) {
-        console.log('@ G');
-        this.grid = Ext.create('Rally.ui.grid.Grid', {
+        var grid = Ext.create('Rally.ui.grid.Grid', {
             store: Ext.create('Rally.data.custom.Store', {
                 data: artifactsWithRevs
             }),
@@ -236,7 +235,7 @@ Ext.define('CustomApp', {
                 }
             ]
         });
-        this.add(this.grid);
+        this.add(grid);
     },
 });
 
